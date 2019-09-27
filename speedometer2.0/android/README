@@ -1,0 +1,56 @@
+### To run ContentShell and collect simpleperf stats
+---
+
+adb push speedometer2.0_meerkat /data/local/tmp/speedometer2.0_meerkat
+
+1. Start ContentShell and load the url benchmarks/speedometer/Speedometer_profile/InteractiveRunnerIters.html
+
+sh /data/local/tmp/speedometer2.0_meerkat/run_speed_index.sh /data/local/tmp/speedometer2.0_meerkat/env_meerkat_setup_numbig_v01.sh 0x10 400
+
+env_meerkat_setup_numbig_v01.sh runs 1 little core and 1 big core
+* Runs the big core at frequency 2.1GHz
+* Disables cstate
+* Disables DTM
+* Disables thermal management
+
+2. Go to Iters text box and increase the iters to 1000 ( a high value) and select ReactTodoMVC and hit Run button.
+
+3. Push the necessary automation script into device.
+adb push run_simpleperf_stats.sh /data/local/tmp
+
+4. Issue from target (Android device) below command to collect perf stat
+sh -x /data/local/tmp/run_simpleperf_stats.sh
+
+This collects 14 hardware cache events, 7 hardware events, 44 raw PMU events,
+and 9 SW events and combine them into a single stat file.
+
+5. Post process using the Excel file attached to the following JIRA: http://jira.spa.sarc.samsung.com/browse/WOR-3671
+
+
+### To run ContentShell and collect simpleperf record and report
+---
+
+1. adb push $(pwd)/run_speedometer_record.sh /data/local/tmp
+
+2. Start the python server from this location:
+  cd benchmarks/speedometer/Speedometer2.0_from_browserbench.org_April-11-2018/Speedometer2.0
+  python -m SimpleHTTPServer 8082
+
+  adb reverse tcp:8082 tcp:8082
+
+3. Issue below command from target (Android device) to start recording.
+  sh -x run_speedometer_record.sh Sub 1 (To record individual suite for sandbox process)
+  sh -x run_speedometer_record.sh All 1 (To record full suite for sandbox process)
+
+  sh -x run_speedometer_record.sh Sub 0 (To record individual suite for CrRenderer thread)
+  sh -x run_speedometer_record.sh All 0 (To record full suite for CrRenderer thread)
+
+4. Issue below command from host for post processing perf.data. This will generate perf report.
+Perf annotate is commented out since it is taking too long a time to complete. Change the necessary
+global variables in the script to match your chromium build directory.
+
+  bash -x $(pwd)/postprocess_simpleperf_record.sh Sub 1 (To report individual suite for sandbox process)
+  bash -x $(pwd)/postprocess_simpleperf_record.sh All 1 (To report full suite for sandbox process)
+
+  bash -x $(pwd)/postprocess_simpleperf_record.sh Sub 0 (To report individual suite for CrRenderer thread)
+  bash -x $(pwd)/postprocess_simpleperf_record.sh All 0 (To report full suite for CrRenderer thread)
